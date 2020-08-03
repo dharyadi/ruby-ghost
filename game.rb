@@ -1,18 +1,16 @@
 require 'set'
 require_relative "player.rb"
 
-
-class Game
+class GhostGame
     ALPHABET = Set.new("a".."z")
     attr_reader :players, :fragment
-    def initialize
-        @players  = Array.new()
-        @players << Player.new("Dhamar")
-        @players << Player.new("Titish")
+
+    def initialize(*players)
+        @players  = players
         @fragment = ""
         @dictionary = File.readlines("dictionary.txt").map {|word| word.chomp}.to_set
-        @losses = Hash.new(0)
-
+        @losses = Hash.new()
+        players.each {|player| @losses[player] = 0}
     end
 
     def current_player 
@@ -40,19 +38,20 @@ class Game
     end
 
     def valid_play?(string)
-        
         return false unless ALPHABET.include?(string)
-         
         @dictionary.any? {|word| word.start_with?(@fragment + string)}
     end
 
 
     def play_round
         while !@dictionary.include?(@fragment)
+            puts "Fragment : " + @fragment
             take_turn(self.current_player)
             self.next_player!
         end
-        p self.previous_player.name + " lost!"
+        puts "Fragment completed : " + @fragment.upcase
+        puts self.previous_player.name + " lost!"
+        puts ""
         @losses[self.previous_player] += 1
     end
 
@@ -75,11 +74,25 @@ class Game
     end
 
     def display_standings
+        puts "-----------------------"
+        puts "Current Standings"
         @losses.keys.each do |player|
             puts player.name + " : " + record(player)
         end
+        puts "-----------------------"
     end
         
+end
+
+
+if __FILE__ == $PROGRAM_NAME
+    game = GhostGame.new(
+        Player.new("Dhamar"),
+        Player.new("Titish"),
+        Player.new("Anggri"),
+        Player.new("Bobby")
+    )
+    game.run
 end
 
 
