@@ -3,35 +3,60 @@ require_relative "player.rb"
 
 class GhostGame
     ALPHABET = Set.new("a".."z")
-    attr_reader :players, :fragment
-
+    MAX_LOSS  = 5
+    
     def initialize(*players)
+        words = File.readlines("dictionary.txt").map {|word| word.chomp}
+        @dictionary = Set.new(words)
         @players  = players
         @fragment = ""
-        @dictionary = File.readlines("dictionary.txt").map {|word| word.chomp}.to_set
         @losses = Hash.new()
+        # initialize the losses hash
         players.each {|player| @losses[player] = 0}
+
     end
 
+    # Call play_round until game over
+    def run 
+        self.play_round until self.game_over?
+        self.game_finishes
+    end
+
+    # Display final standings and winner when the game is over
+    def game_finishes
+        self.display_standings
+        player_won = @players.select {|player| @losses[player] < MAX_LOSS}
+        puts player_won.first.name + " won!"
+    end
+
+    # Returns the current player that is going to enter a char
     def current_player 
         @players.first
     end
-        
+    
+    # Returns the previous player before the current player
     def previous_player
-        @players.last
+        @players.reverse.each do |player|
+            return player if @losses[player] < MAX_LOSS
+        end
     end
 
+    # Rotate the @players array to get the next player to play
     def next_player!
-        @players.rotate!
+        loop do 
+            @players.rotate! 
+            break if @losses[@players.first] < MAX_LOSS
+        end
     end
 
+    # Current player take turns. Current player should make a valid guess
     def take_turn(player)
-        while true
+        loop do
             guess = player.guess
             if valid_play?(guess)
                 @fragment += guess 
-                break
-            else 
+                break 
+            else
                 player.alert_invalid_guess
             end
         end
@@ -44,11 +69,21 @@ class GhostGame
 
 
     def play_round
+        self.display_standings
+        # Reset fragment for every round
+        @fragment = ""
+
+        # Loop keeps running until the current player enters a char
+        # that makes the fragment a valid word
         while !@dictionary.include?(@fragment)
-            puts "Fragment : " + @fragment
+            puts "Current fragment : " + @fragment
             take_turn(self.current_player)
             self.next_player!
         end
+        self.round_finish
+    end
+
+    def round_finish
         puts "Fragment completed : " + @fragment.upcase
         puts self.previous_player.name + " lost!"
         puts ""
@@ -61,16 +96,11 @@ class GhostGame
         ghost[0...losses]
     end
 
-    def run 
-        while !self.game_over?
-            self.display_standings
-            @fragment = ""
-            self.play_round
-        end
-    end
 
+    # Game finishes when there's only 1 player with number of losses
+    # less than MAX_LOSS
     def game_over?
-        @losses.keys.any? {|player| @losses[player] == 5}
+        @losses.keys.one? {|player| @losses[player] < MAX_LOSS}
     end
 
     def display_standings
@@ -81,16 +111,15 @@ class GhostGame
         end
         puts "-----------------------"
     end
-        
 end
 
 
 if __FILE__ == $PROGRAM_NAME
     game = GhostGame.new(
         Player.new("Dhamar"),
-        Player.new("Titish"),
-        Player.new("Anggri"),
-        Player.new("Bobby")
+        Player.new("Titish")
+        # Player.new("Anggri")
+        # Player.new("Bobby")
     )
     game.run
 end
