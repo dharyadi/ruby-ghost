@@ -1,18 +1,25 @@
 require 'set'
 require_relative "player.rb"
+require_relative "ai_player.rb"
 
 class GhostGame
     ALPHABET = Set.new("a".."z")
     MAX_LOSS  = 5
     
-    def initialize(*players)
+    def initialize(aiPlayer_nums, *players)
         words = File.readlines("dictionary.txt").map {|word| word.chomp}
         @dictionary = Set.new(words)
         @players  = players
+        aiPlayer_nums.times do |i|
+            @players << AiPlayer.new("AI_Player " + (i + 1).to_s)
+        end
         @fragment = ""
         @losses = Hash.new()
-        # initialize the losses hash
+
+        # initialize the losses hash with human players
         players.each {|player| @losses[player] = 0}
+  
+
 
     end
 
@@ -52,7 +59,8 @@ class GhostGame
     # Current player take turns. Current player should make a valid guess
     def take_turn(player)
         loop do
-            guess = player.guess
+            guess = player.is_a?(Player) ? player.guess : player.guess(@dictionary, @fragment, @players.length)
+            
             if valid_play?(guess)
                 @fragment += guess 
                 break 
@@ -115,9 +123,9 @@ end
 
 
 if __FILE__ == $PROGRAM_NAME
-    game = GhostGame.new(
-        Player.new("Dhamar"),
-        Player.new("Titish")
+    game = GhostGame.new(2,
+        Player.new("Dhamar")
+        # Player.new("Titish")
         # Player.new("Anggri")
         # Player.new("Bobby")
     )
